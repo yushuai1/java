@@ -1,55 +1,45 @@
-name: CRD Java Model Generate
-on:
-  workflow_dispatch:
-    inputs:
-      crds:
-        type: string
-        required: true
-        description: 'Comma-separated paths to CRD yaml sources, can be either HTTP url or local file path.'
-      generatingJavaPackage:
-        type: string
-        required: true
-        description: 'The package name of the generated java project.'
-      crdApiGroupPrefix:
-        type: string
-        required: false
-        description: 'The prefix of the target CRDs api group to generate. (Optional)'
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: tenants.aps.datacanvas.com
+spec:
+  additionalPrinterColumns:
+  - JSONPath: .spec.name
+    name: TName
+    type: string
+  - JSONPath: .spec.namespaces[0].name
+    name: ns0
+    type: string
+  - JSONPath: .spec.namespaces[1].name
+    name: ns1
+    type: string
+  - JSONPath: .spec.sparkConf.hdfsRoot
+    name: hdfs
+    type: string
+  - JSONPath: .spec.sparkConf.yarnQueue
+    name: yarn
+    type: string
+  - JSONPath: .spec.sparkConf.principal
+    name: principal
+    type: string
+  - JSONPath: .metadata.creationTimestamp
+    description: |-
+      CreationTimestamp is a timestamp representing the server time when this object was created. It is not guaranteed to be set in happens-before order across separate operations. Clients may not set this value. It is represented in RFC3339 form and is in UTC.
 
-env:
-  IMAGE_NAME: ghcr.io/kubernetes-client/java/crd-model-gen
-  IMAGE_TAG: v1.0.6
-  GEN_DIR: crd-gen
-
-permissions:
-  contents: read
-
-jobs:
-  generate:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Run CRD Model Generation
-        run: |
-          read CRD_SRC_ARGS < <(echo '${{ github.event.inputs.crds }}' | perl -ne 'print join " ", map {"-u $_"} split /,/')
-          test -z ${{ github.event.inputs.crdApiGroupPrefix }} || export CRD_API_GROUP_ARGS="-n ${{ github.event.inputs.crdApiGroupPrefix }}"
-          echo "CRD Src Args: ${CRD_SRC_ARGS}"
-          echo "CRD Api Group Prefix Args: ${CRD_API_GROUP_ARGS}"
-          mkdir -p ${GEN_DIR}
-          docker run \
-            --rm \
-            -v /var/run/docker.sock:/var/run/docker.sock \
-            -v "$(pwd)":"$(pwd)" \
-            --network host \
-            ${IMAGE_NAME}:${IMAGE_TAG} \
-            /generate.sh \
-            ${CRD_SRC_ARGS} \
-            ${CRD_API_GROUP_ARGS} \
-            -p ${{ github.event.inputs.generatingJavaPackage }} \
-            -o "$(pwd)/${GEN_DIR}"
-          ls -lh ${GEN_DIR}
-      - uses: actions/upload-artifact@v3
-        with:
-          name: generated-java-crd-model
-          path: |
-            ${{ env.GEN_DIR }}
+      Populated by the system. Read-only. Null for lists. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata
+    name: Age
+    type: date
+  group: aps.datacanvas.com
+  names:
+    kind: Tenant
+    listKind: TenantList
+    plural: tenants
+    singular: tenant
+    shortNames:
+    - tnt
+  scope: Namespaced
+  version: v1
+  versions:
+  - name: v1
+    served: true
+    storage: true
